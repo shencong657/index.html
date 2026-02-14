@@ -44,12 +44,50 @@
         .cdk-item {
             margin: 10px 0;
             font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
         }
         
         .cdk-label {
             font-weight: bold;
             color: #555;
             margin-right: 10px;
+        }
+        
+        .copy-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-left: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .copy-btn:hover {
+            background: #218838;
+        }
+        
+        .copy-btn.copied {
+            background: #6c757d;
+        }
+        
+        /* 勾勾图标样式 */
+        .checkmark {
+            color: white;
+            font-weight: bold;
+            display: none;
+        }
+        
+        .copy-btn.copied .checkmark {
+            display: inline;
         }
         
         .btn-container {
@@ -120,10 +158,18 @@
             <div class="cdk-item">
                 <span class="cdk-label">CDK：</span>
                 <span id="cdkCode"></span>
+                <button class="copy-btn" onclick="copyToClipboard('cdkCode', this)">
+                    复制
+                    <span class="checkmark">✓</span>
+                </button>
             </div>
             <div class="cdk-item">
                 <span class="cdk-label">助力码：</span>
                 <span id="inviteCode"></span>
+                <button class="copy-btn" onclick="copyToClipboard('inviteCode', this)">
+                    复制
+                    <span class="checkmark">✓</span>
+                </button>
             </div>
         </div>
         
@@ -250,6 +296,7 @@
         const CONFIG = {
             MAX_CLAIMS_PER_PERIOD: 7,    // 每周期最多领取次数
             PERIOD_DURATION: 3 * 24 * 60 * 60 * 1000, // 周期时长（3天，毫秒）
+            COPY_SUCCESS_DURATION: 10 * 1000 // 复制成功状态显示时长（10秒，仅修改这一行）
         };
 
         // 初始化页面
@@ -257,6 +304,39 @@
             updateUsageInfo();
             checkClaimStatus();
         };
+
+        // 复制到剪贴板函数
+        function copyToClipboard(elementId, button) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            
+            if (!text) {
+                alert('暂无可复制的内容！');
+                return;
+            }
+            
+            // 创建临时文本区域进行复制
+            const tempInput = document.createElement('textarea');
+            tempInput.value = text;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            
+            // 按钮状态反馈
+            button.classList.add('copied');
+            
+            // 清除之前的定时器（避免重复触发）
+            if (button.resetTimer) {
+                clearTimeout(button.resetTimer);
+            }
+            
+            // 10秒后恢复按钮状态
+            button.resetTimer = setTimeout(() => {
+                button.classList.remove('copied');
+                button.resetTimer = null;
+            }, CONFIG.COPY_SUCCESS_DURATION);
+        }
 
         // 获取用户唯一标识（简单实现，基于本地存储）
         function getUserId() {
@@ -345,7 +425,7 @@
                 statusText.className = 'info-text warning';
             } else {
                 btn.disabled = false;
-                statusText.textContent = `点击下方按钮领取CDK，每人3天内最多领取${CONFIG.MAX_CLAIMS_PER_PERIOD}次，且领取的CDK不重复`;
+                statusText.textContent = `点击下方按钮领取CDK，每人3天内最多领取${CONFIG.MAX_CLAIMS_PERIOD}次，且领取的CDK不重复`;
                 statusText.className = 'info-text';
             }
         }
@@ -376,7 +456,7 @@
                 
                 // 检查领取次数限制
                 if (updatedUserRecord.claims.length >= CONFIG.MAX_CLAIMS_PER_PERIOD) {
-                    document.getElementById('statusText').textContent = `你已达到3天内最大领取次数(${CONFIG.MAX_CLAIMS_PER_PERIOD}次)！`;
+                    document.getElementById('statusText').textContent = `你已达到3天内最大领取次数(${CONFIG.MAX_CLAIMS_PERIOD}次)！`;
                     document.getElementById('statusText').className = 'info-text warning';
                     return;
                 }
